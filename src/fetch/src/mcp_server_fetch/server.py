@@ -32,16 +32,38 @@ def extract_content_from_html(html: str) -> str:
     Returns:
         Simplified markdown version of the content
     """
-    ret = readabilipy.simple_json.simple_json_from_html_string(
-        html, use_readability=True
-    )
-    if not ret["content"]:
-        return "<error>Page failed to be simplified from HTML</error>"
-    content = markdownify.markdownify(
-        ret["content"],
-        heading_style=markdownify.ATX,
-    )
-    return content
+    # For simple HTML snippets, convert directly
+    if len(html) < 1000 and "<html" not in html.lower():
+        return markdownify.markdownify(
+            html,
+            heading_style=markdownify.ATX,
+        )
+
+    try:
+        ret = readabilipy.simple_json.simple_json_from_html_string(
+            html, use_readability=True
+        )
+        if not ret or not ret.get("content"):
+            # Try direct conversion as fallback for empty content
+            direct_conversion = markdownify.markdownify(
+                html,
+                heading_style=markdownify.ATX,
+            ).strip()
+            if direct_conversion:
+                return direct_conversion
+            return "<error>Page failed to be simplified from HTML</error>"
+            
+        content = markdownify.markdownify(
+            ret["content"],
+            heading_style=markdownify.ATX,
+        )
+        return content
+    except Exception:
+        # Fallback to direct conversion if readabilipy fails
+        return markdownify.markdownify(
+            html,
+            heading_style=markdownify.ATX,
+        )
 
 
 def get_robots_txt_url(url: AnyUrl | str) -> str:
